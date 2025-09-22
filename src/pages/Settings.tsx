@@ -40,7 +40,7 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="general" className="flex items-center space-x-2">
             <SettingsIcon className="h-4 w-4" />
             <span>General</span>
@@ -48,10 +48,6 @@ const Settings = () => {
           <TabsTrigger value="departments" className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
             <span>Departments</span>
-          </TabsTrigger>
-          <TabsTrigger value="database" className="flex items-center space-x-2">
-            <Database className="h-4 w-4" />
-            <span>Database</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center space-x-2">
             <Bell className="h-4 w-4" />
@@ -162,74 +158,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="database" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Database className="h-5 w-5" />
-                <span>Database Configuration</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="p-4 bg-info/10 border border-info/20 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-info" />
-                  <span className="text-sm font-medium text-info">MySQL Database Setup</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Since you have your own MySQL server, here's the SQL schema for the visitor management system:
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label>Download Database Schema</Label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Click the button below to download the complete SQL file for your MySQL server
-                  </p>
-                  <Button variant="outline" className="w-full">
-                    <Database className="h-4 w-4 mr-2" />
-                    Download visitor_management.sql
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Database Connection Status</Label>
-                  <div className="flex items-center space-x-2 p-3 bg-success/10 border border-success/20 rounded-lg">
-                    <div className="w-2 h-2 bg-success rounded-full"></div>
-                    <span className="text-sm text-success">Connected to MySQL Server</span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dbHost">Database Host</Label>
-                    <Input id="dbHost" defaultValue="localhost" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dbPort">Port</Label>
-                    <Input id="dbPort" defaultValue="3306" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dbName">Database Name</Label>
-                    <Input id="dbName" defaultValue="visitor_management" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dbUser">Username</Label>
-                    <Input id="dbUser" defaultValue="admin" />
-                  </div>
-                </div>
-              </div>
-              
-              <Button onClick={handleSaveSettings} className="w-full">
-                Test & Save Database Settings
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
           <Card>

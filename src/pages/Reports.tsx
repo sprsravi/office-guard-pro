@@ -3,9 +3,39 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Download, Calendar, Users, TrendingUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const Reports = () => {
+  const { toast } = useToast();
+  
+  const handleExportReport = () => {
+    // Create CSV content
+    const csvContent = `Date,Day,Visitors,Department,Company,Status
+2025-09-16,Monday,45,IT-Infrastructure,Tech Corp,Completed
+2025-09-17,Tuesday,52,Marketing,Marketing Solutions,Completed
+2025-09-18,Wednesday,38,Sales,Finance Plus,Completed
+2025-09-19,Thursday,61,Finance,Global Industries,Completed
+2025-09-20,Friday,43,HR,Innovation Labs,Completed
+2025-09-21,Saturday,28,Administration,Various,Completed
+2025-09-22,Sunday,15,Customer Support,Various,Completed`;
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `visitor_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Report Exported",
+      description: "Visitor report has been downloaded successfully.",
+    });
+  };
+
   // Mock data for charts
   const dailyVisitors = [
     { day: "Mon", visitors: 45 },
@@ -53,7 +83,7 @@ const Reports = () => {
               <SelectItem value="year">This Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="flex items-center space-x-2">
+          <Button variant="outline" className="flex items-center space-x-2" onClick={handleExportReport}>
             <Download className="h-4 w-4" />
             <span>Export Report</span>
           </Button>
