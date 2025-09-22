@@ -305,8 +305,8 @@ DELIMITER ;
 
 -- Create indexes for better performance
 CREATE INDEX idx_visitor_email ON visitors(email);
-CREATE INDEX idx_visitor_logs_date ON visitor_logs(DATE(check_in_time));
-CREATE INDEX idx_visitor_logs_status_date ON visitor_logs(status, DATE(check_in_time));
+CREATE INDEX idx_visitor_logs_date ON visitor_logs(check_in_time);
+CREATE INDEX idx_visitor_logs_status_date ON visitor_logs(status, check_in_time);
 
 -- Sample data (optional - remove in production)
 -- INSERT INTO hosts (name, email, department_id, designation) VALUES
