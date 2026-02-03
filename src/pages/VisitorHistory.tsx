@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Filter, Download, Eye, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Filter, Download, Eye, Calendar as CalendarIcon, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { visitorsApi, type Visitor } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const VisitorHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,126 +19,83 @@ const VisitorHistory = () => {
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
 
-  // Mock data - in real app this would come from your MySQL database
-  const visitors = [
-    {
-      id: 1,
-      name: "John Smith",
-      email: "john@techcorp.com",
-      mobile: "+91 9876543210",
-      company: "Tech Corp",
-      department: "IT-Infrastructure",
-      host: "Alice Johnson",
-      checkIn: "2024-01-15 09:30:00",
-      checkOut: "2024-01-15 17:45:00",
-      status: "completed",
-      idType: "Aadhaar Card",
-      idNumber: "1234-5678-9012",
-      purpose: "System maintenance discussion"
-    },
-    {
-      id: 2,
-      name: "Sarah Wilson",
-      email: "sarah@marketing.com",
-      mobile: "+91 9876543211",
-      company: "Marketing Solutions",
-      department: "Marketing",
-      host: "Bob Smith",
-      checkIn: "2024-01-15 11:00:00",
-      checkOut: "2024-01-15 15:30:00",
-      status: "completed",
-      idType: "PAN Card",
-      idNumber: "ABCDE1234F",
-      purpose: "Campaign planning meeting"
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@finance.com",
-      mobile: "+91 9876543212",
-      company: "Finance Plus",
-      department: "Finance",
-      host: "Carol Davis",
-      checkIn: "2024-01-16 14:15:00",
-      checkOut: null,
-      status: "checked-in",
-      idType: "Driving License",
-      idNumber: "DL1234567890",
-      purpose: "Budget review"
-    }
-  ];
+  // Fetch visitors from MySQL API
+  const { data: visitors = [], isLoading, error, refetch } = useQuery<Visitor[]>({
+    queryKey: ['visitors', fromDate, toDate, statusFilter],
+    queryFn: () => visitorsApi.getAll({
+      startDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
+      endDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+    }),
+  });
 
+  // Client-side search filtering
   const filteredVisitors = visitors.filter(visitor => {
     const matchesSearch = 
       visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visitor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visitor.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visitor.mobile.includes(searchTerm);
+      (visitor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (visitor.company?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (visitor.phone?.includes(searchTerm) ?? false);
     
-    const matchesStatus = statusFilter === "all" || visitor.status === statusFilter;
-    
-    const checkInDate = new Date(visitor.checkIn);
-    const matchesFromDate = !fromDate || checkInDate >= fromDate;
-    const matchesToDate = !toDate || checkInDate <= toDate;
-    
-    return matchesSearch && matchesStatus && matchesFromDate && matchesToDate;
+    return matchesSearch;
   });
 
-  const exportToCSV = () => {
-    const headers = [
-      'Name', 'Email', 'Mobile', 'Company', 'Department', 'Host', 
-      'Check In', 'Check Out', 'Status', 'ID Type', 'ID Number', 'Purpose'
-    ];
-    
-    const csvData = filteredVisitors.map(visitor => [
-      visitor.name,
-      visitor.email,
-      visitor.mobile,
-      visitor.company,
-      visitor.department,
-      visitor.host,
-      visitor.checkIn,
-      visitor.checkOut || 'N/A',
-      visitor.status,
-      visitor.idType,
-      visitor.idNumber,
-      visitor.purpose
-    ]);
-    
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    
-    const dateRange = fromDate && toDate 
-      ? `_${format(fromDate, 'yyyy-MM-dd')}_to_${format(toDate, 'yyyy-MM-dd')}`
-      : fromDate 
-      ? `_from_${format(fromDate, 'yyyy-MM-dd')}`
-      : toDate
-      ? `_to_${format(toDate, 'yyyy-MM-dd')}`
-      : '';
-    
-    link.setAttribute('download', `visitor_history${dateRange}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportCSV = async () => {
+    try {
+      await visitorsApi.exportCSV({
+        startDate: fromDate ? format(fromDate, 'yyyy-MM-dd') : undefined,
+        endDate: toDate ? format(toDate, 'yyyy-MM-dd') : undefined,
+      });
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Visitor['status']) => {
     switch (status) {
-      case "checked-in":
+      case "checked_in":
         return <Badge className="bg-success text-success-foreground">Checked In</Badge>;
-      case "completed":
-        return <Badge variant="secondary">Completed</Badge>;
+      case "checked_out":
+        return <Badge variant="secondary">Checked Out</Badge>;
+      case "pre_registered":
+        return <Badge variant="outline">Pre-registered</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  const mapStatusForFilter = (status: string): string => {
+    if (status === 'checked-in') return 'checked_in';
+    if (status === 'completed') return 'checked_out';
+    return status;
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold text-foreground">Visitor History</h2>
+          <p className="text-muted-foreground">Track and manage all visitor records</p>
+        </div>
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <p className="font-medium">Failed to connect to backend</p>
+                <p className="text-sm text-muted-foreground">
+                  Make sure your MySQL backend is running at the configured API URL.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -166,14 +126,18 @@ const VisitorHistory = () => {
                   />
                 </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select 
+                value={statusFilter} 
+                onValueChange={(value) => setStatusFilter(mapStatusForFilter(value))}
+              >
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="checked-in">Checked In</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="checked_in">Checked In</SelectItem>
+                  <SelectItem value="checked_out">Checked Out</SelectItem>
+                  <SelectItem value="pre_registered">Pre-registered</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -197,6 +161,7 @@ const VisitorHistory = () => {
                       selected={fromDate}
                       onSelect={setFromDate}
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -220,6 +185,7 @@ const VisitorHistory = () => {
                       selected={toDate}
                       onSelect={setToDate}
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -231,14 +197,16 @@ const VisitorHistory = () => {
                   onClick={() => {
                     setFromDate(undefined);
                     setToDate(undefined);
+                    setStatusFilter('all');
+                    setSearchTerm('');
                   }}
                 >
-                  Clear Dates
+                  Clear Filters
                 </Button>
                 <Button 
                   variant="outline" 
                   className="flex items-center space-x-2"
-                  onClick={exportToCSV}
+                  onClick={handleExportCSV}
                 >
                   <Download className="h-4 w-4" />
                   <span>Export</span>
@@ -252,77 +220,99 @@ const VisitorHistory = () => {
       {/* Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Visitor Records ({filteredVisitors.length})</CardTitle>
+          <CardTitle>
+            Visitor Records {isLoading ? '' : `(${filteredVisitors.length})`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Visitor</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredVisitors.map((visitor) => (
-                  <TableRow key={visitor.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{visitor.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          ID: {visitor.idType} - {visitor.idNumber}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredVisitors.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>No visitor records found</p>
+              <p className="text-sm mt-1">Try adjusting your filters</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Visitor</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Host</TableHead>
+                    <TableHead>Check In</TableHead>
+                    <TableHead>Check Out</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredVisitors.map((visitor) => (
+                    <TableRow key={visitor.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{visitor.name}</div>
+                          {visitor.id_proof_type && (
+                            <div className="text-sm text-muted-foreground">
+                              ID: {visitor.id_proof_type} - {visitor.id_proof_number}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{visitor.email}</div>
-                        <div className="text-muted-foreground">{visitor.mobile}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{visitor.company}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{visitor.department}</Badge>
-                    </TableCell>
-                    <TableCell>{visitor.host}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {new Date(visitor.checkIn).toLocaleDateString()}
-                        <div className="text-muted-foreground">
-                          {new Date(visitor.checkIn).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {visitor.checkOut ? (
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm">
-                          {new Date(visitor.checkOut).toLocaleDateString()}
+                          <div>{visitor.email ?? '-'}</div>
+                          <div className="text-muted-foreground">{visitor.phone ?? '-'}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{visitor.company ?? '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{visitor.purpose}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{visitor.host_name}</div>
+                          {visitor.host_department && (
+                            <div className="text-sm text-muted-foreground">{visitor.host_department}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(visitor.check_in_time).toLocaleDateString()}
                           <div className="text-muted-foreground">
-                            {new Date(visitor.checkOut).toLocaleTimeString()}
+                            {new Date(visitor.check_in_time).toLocaleTimeString()}
                           </div>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(visitor.status)}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                      <TableCell>
+                        {visitor.check_out_time ? (
+                          <div className="text-sm">
+                            {new Date(visitor.check_out_time).toLocaleDateString()}
+                            <div className="text-muted-foreground">
+                              {new Date(visitor.check_out_time).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(visitor.status)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
