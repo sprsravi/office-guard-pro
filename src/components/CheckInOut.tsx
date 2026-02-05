@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { UserCheck, UserX, Phone, Mail, Building2, IdCard, Loader2, Search, AlertCircle } from "lucide-react";
+import { Laptop } from "lucide-react";
 import { visitorsApi, departmentsApi, hostsApi, purposesApi, Visitor } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -33,6 +34,10 @@ const CheckInOut = () => {
     id_proof_number: "",
     vehicle_number: "",
     notes: "",
+    has_laptop: "no",
+    laptop_make: "",
+    laptop_model: "",
+    laptop_serial: "",
   });
 
   // Fetch departments from API (with fallback)
@@ -84,6 +89,10 @@ const CheckInOut = () => {
         id_proof_number: "",
         vehicle_number: "",
         notes: "",
+        has_laptop: "no",
+        laptop_make: "",
+        laptop_model: "",
+        laptop_serial: "",
       });
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
@@ -165,6 +174,16 @@ const CheckInOut = () => {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate laptop details if visitor has laptop
+    if (formData.has_laptop === "yes" && (!formData.laptop_make || !formData.laptop_model || !formData.laptop_serial)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all laptop details (Make, Model, and Serial Number).",
         variant: "destructive",
       });
       return;
@@ -381,6 +400,63 @@ const CheckInOut = () => {
                     />
                   </div>
                   
+                  <div className="space-y-2">
+                    <Label htmlFor="hasLaptop">Carrying Laptop?</Label>
+                    <Select 
+                      value={formData.has_laptop} 
+                      onValueChange={(value) => handleInputChange('has_laptop', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Do you have a laptop?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No</SelectItem>
+                        <SelectItem value="yes">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Laptop Details - Conditional */}
+                {formData.has_laptop === "yes" && (
+                  <div className="p-4 bg-accent/30 rounded-lg border border-border space-y-4">
+                    <div className="flex items-center space-x-2 text-primary">
+                      <Laptop className="h-5 w-5" />
+                      <span className="font-medium">Laptop Details</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="laptopMake">Laptop Make *</Label>
+                        <Input 
+                          id="laptopMake" 
+                          placeholder="e.g., Dell, HP, Lenovo"
+                          value={formData.laptop_make}
+                          onChange={(e) => handleInputChange('laptop_make', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="laptopModel">Laptop Model *</Label>
+                        <Input 
+                          id="laptopModel" 
+                          placeholder="e.g., Latitude 5520, ThinkPad X1"
+                          value={formData.laptop_model}
+                          onChange={(e) => handleInputChange('laptop_model', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="laptopSerial">Serial Number *</Label>
+                        <Input 
+                          id="laptopSerial" 
+                          placeholder="Laptop serial number"
+                          value={formData.laptop_serial}
+                          onChange={(e) => handleInputChange('laptop_serial', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="purpose">Purpose of Visit</Label>
                     <Select 
