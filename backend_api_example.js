@@ -1,41 +1,103 @@
-/**
- * Backend API Example - Node.js/Express with MySQL
- * 
- * SETUP INSTRUCTIONS:
- * 1. Create a new folder for your backend
- * 2. Run: npm init -y
- * 3. Run: npm install express mysql2 cors dotenv
- * 4. Create a .env file with your MySQL credentials
- * 5. Run this file with: node backend_api_example.js
- */
-
-const express = require('express');
-const mysql = require('mysql2/promise');
-const cors = require('cors');
-require('dotenv').config();
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// MySQL connection pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'visitor_management',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+ /**
+  * Backend API - Production Ready for XAMPP
+  * 
+  * XAMPP DEPLOYMENT INSTRUCTIONS:
+  * ================================
+  * 1. Create folder: C:\xampp\htdocs\visitor-api
+  * 2. Copy this file as: index.js
+  * 3. Open Command Prompt in that folder
+  * 4. Run: npm init -y
+  * 5. Run: npm install express mysql2 cors dotenv pm2 -g
+  * 6. Import visitor_management.sql into phpMyAdmin
+  * 7. Start with: pm2 start index.js --name visitor-api
+  * 8. Auto-start on boot: pm2 startup && pm2 save
+  * 
+  * Your API will be available at: http://localhost:3001/api
+  */
+ 
+ const express = require('express');
+ const mysql = require('mysql2/promise');
+ const cors = require('cors');
+ require('dotenv').config();
+ 
+ const app = express();
+ 
+ // CORS - Allow your frontend domain
+ app.use(cors({
+   origin: [
+     'http://localhost:5173',
+     'http://localhost:3000',
+     'https://id-preview--ee2dac0b-288b-4421-97b4-34deb5944767.lovable.app',
+     'https://ee2dac0b-288b-4421-97b4-34deb5944767.lovableproject.com',
+     // Add your production domain here:
+     // 'https://your-domain.com'
+   ],
+   credentials: true
+ }));
+ app.use(express.json());
+ 
+ // ============ MYSQL CONNECTION POOL WITH KEEP-ALIVE ============
+ // This configuration prevents daily connection drops
+ 
+ const pool = mysql.createPool({
+   host: process.env.DB_HOST || 'localhost',
+   user: process.env.DB_USER || 'root',
+   password: process.env.DB_PASSWORD || '',  // XAMPP default is empty
+   database: process.env.DB_NAME || 'visitor_management',
+   port: process.env.DB_PORT || 3306,
+   waitForConnections: true,
+   connectionLimit: 10,
+   queueLimit: 0,
+   // CRITICAL: These settings prevent connection timeout
+   enableKeepAlive: true,
+   keepAliveInitialDelay: 10000,  // 10 seconds
+   // Reconnect on connection loss
+   maxIdle: 10,
+   idleTimeout: 60000,  // 60 seconds
+ });
+ 
+ // ============ KEEP-ALIVE PING (Every 5 minutes) ============
+ // Prevents MySQL from closing idle connections
+ 
+ setInterval(async () => {
+   try {
+     await pool.query('SELECT 1');
+     console.log(`[${new Date().toISOString()}] Database keep-alive ping successful`);
+   } catch (error) {
+     console.error(`[${new Date().toISOString()}] Database keep-alive failed:`, error.message);
+   }
+ }, 5 * 60 * 1000);  // 5 minutes
+ 
+ // ============ STARTUP CONNECTION TEST ============
+ 
+ (async () => {
+   try {
+     await pool.query('SELECT 1');
+     console.log('✅ Database connected successfully');
+   } catch (error) {
+     console.error('❌ Database connection failed:', error.message);
+     console.log('Please check your MySQL settings and ensure XAMPP MySQL is running');
+   }
+ })();
 
 // Test database connection
 app.get('/api/health', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT 1');
-    res.json({ status: 'ok', database: 'connected' });
+    const connection = await pool.getConnection();
+    await connection.query('SELECT 1');
+    connection.release();
+    res.json({ 
+      status: 'ok', 
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(500).json({ 
+      status: 'error', 
+      database: 'disconnected',
+      message: error.message 
+    });
   }
 });
 
@@ -267,6 +329,39 @@ app.get('/api/visitors/export/csv', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+ const server = app.listen(PORT, () => {
+   console.log('');
+   console.log('==========================================');
+   console.log('   VISITOR MANAGEMENT API SERVER');
+   console.log('==========================================');
+   console.log(`✅ Server running on: http://localhost:${PORT}`);
+   console.log(`✅ API Endpoint: http://localhost:${PORT}/api`);
+   console.log(`✅ Health Check: http://localhost:${PORT}/api/health`);
+   console.log('');
+   console.log('PM2 Commands:');
+   console.log('  pm2 logs visitor-api   - View logs');
+   console.log('  pm2 restart visitor-api - Restart server');
+   console.log('  pm2 stop visitor-api    - Stop server');
+   console.log('==========================================');
+   console.log('');
+ });
+ 
+ // ============ GRACEFUL SHUTDOWN ============
+ 
+ process.on('SIGTERM', () => {
+   console.log('SIGTERM received. Closing server...');
+   server.close(() => {
+     pool.end();
+     console.log('Server closed. Database pool ended.');
+     process.exit(0);
+   });
+ });
+ 
+ process.on('SIGINT', () => {
+   console.log('SIGINT received. Closing server...');
+   server.close(() => {
+     pool.end();
+     console.log('Server closed. Database pool ended.');
+     process.exit(0);
+   });
+ });
