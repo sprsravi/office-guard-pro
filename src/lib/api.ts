@@ -25,6 +25,11 @@ export interface Visitor {
   check_out_time?: string;
   status: 'checked_in' | 'checked_out' | 'pre_registered';
   notes?: string;
+  // Laptop tracking fields
+  has_laptop?: boolean;
+  laptop_make?: string;
+  laptop_model?: string;
+  laptop_serial?: string;
   created_at: string;
   updated_at: string;
 }
