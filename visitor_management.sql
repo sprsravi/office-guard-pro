@@ -72,6 +72,11 @@ CREATE TABLE visitor_logs (
     appointment_time DATETIME,
     electronic_devices TEXT,
     feedback TEXT,
+    -- Laptop tracking fields
+    has_laptop BOOLEAN DEFAULT FALSE,
+    laptop_make VARCHAR(100),
+    laptop_model VARCHAR(100),
+    laptop_serial VARCHAR(100),
     status ENUM('checked-in', 'checked-out', 'overstay') DEFAULT 'checked-in',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -82,7 +87,8 @@ CREATE TABLE visitor_logs (
     INDEX idx_host (host_id),
     INDEX idx_department (department_id),
     INDEX idx_check_in (check_in_time),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_has_laptop (has_laptop)
 );
 
 -- Table for system settings

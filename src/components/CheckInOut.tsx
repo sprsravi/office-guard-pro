@@ -190,7 +190,10 @@ const CheckInOut = () => {
       return;
     }
 
-    checkInMutation.mutate(formData);
+    checkInMutation.mutate({
+      ...formData,
+      has_laptop: formData.has_laptop === "yes"
+    });
   };
 
   const handleCheckOut = (event: React.FormEvent) => {

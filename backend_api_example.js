@@ -151,17 +151,19 @@ app.post('/api/visitors/checkin', async (req, res) => {
     const {
       name, email, phone, company, purpose, host_name,
       host_department, badge_number, photo_url, id_proof_type,
-      id_proof_number, vehicle_number, notes
+      id_proof_number, vehicle_number, notes,
+      has_laptop, laptop_make, laptop_model, laptop_serial
     } = req.body;
 
     const [result] = await pool.query(
       `INSERT INTO visitors 
        (name, email, phone, company, purpose, host_name, host_department, 
         badge_number, photo_url, id_proof_type, id_proof_number, vehicle_number, 
-        check_in_time, status, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'checked_in', ?)`,
+        check_in_time, status, notes, has_laptop, laptop_make, laptop_model, laptop_serial)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'checked_in', ?, ?, ?, ?, ?)`,
       [name, email, phone, company, purpose, host_name, host_department,
-       badge_number, photo_url, id_proof_type, id_proof_number, vehicle_number, notes]
+       badge_number, photo_url, id_proof_type, id_proof_number, vehicle_number, notes,
+       has_laptop === 'yes' || has_laptop === true, laptop_make, laptop_model, laptop_serial]
     );
 
     const [visitor] = await pool.query('SELECT * FROM visitors WHERE id = ?', [result.insertId]);
@@ -312,10 +314,11 @@ app.get('/api/visitors/export/csv', async (req, res) => {
     const [rows] = await pool.query(query, params);
     
     // Convert to CSV
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Company', 'Purpose', 'Host', 'Department', 'Check In', 'Check Out', 'Status'];
+    const headers = ['ID', 'Name', 'Email', 'Phone', 'Company', 'Purpose', 'Host', 'Department', 'Check In', 'Check Out', 'Status', 'Has Laptop', 'Laptop Make', 'Laptop Model', 'Laptop Serial'];
     const csvRows = rows.map(r => [
       r.id, r.name, r.email, r.phone, r.company, r.purpose, r.host_name, 
-      r.host_department, r.check_in_time, r.check_out_time, r.status
+      r.host_department, r.check_in_time, r.check_out_time, r.status,
+      r.has_laptop ? 'Yes' : 'No', r.laptop_make || '', r.laptop_model || '', r.laptop_serial || ''
     ].join(','));
     
     const csv = [headers.join(','), ...csvRows].join('\n');
