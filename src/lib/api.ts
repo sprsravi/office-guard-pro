@@ -1,14 +1,12 @@
 /**
- * API Service for MySQL Backend
- * 
- * Update the API_BASE_URL to point to your backend server
+ * API Service using Lovable Cloud Database
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { supabase } from "@/integrations/supabase/client";
 
 // Types
 export interface Visitor {
-  id: number;
+  id: string;
   name: string;
   email?: string;
   phone?: string;
@@ -25,7 +23,6 @@ export interface Visitor {
   check_out_time?: string;
   status: 'checked_in' | 'checked_out' | 'pre_registered';
   notes?: string;
-  // Laptop tracking fields
   has_laptop?: boolean;
   laptop_make?: string;
   laptop_model?: string;
@@ -35,7 +32,7 @@ export interface Visitor {
 }
 
 export interface Host {
-  id: number;
+  id: string;
   name: string;
   email: string;
   phone?: string;
@@ -45,14 +42,14 @@ export interface Host {
 }
 
 export interface Department {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   is_active: boolean;
 }
 
 export interface VisitPurpose {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   is_active: boolean;
@@ -65,64 +62,99 @@ export interface DashboardStats {
   monthVisitors: number;
 }
 
-// API Helper
-async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
-  }
-
-  return response.json();
-}
-
 // ============ VISITORS API ============
 
 export const visitorsApi = {
-  // Get all visitors with optional filters
-  getAll: (params?: { startDate?: string; endDate?: string; status?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.append('startDate', params.startDate);
-    if (params?.endDate) searchParams.append('endDate', params.endDate);
-    if (params?.status) searchParams.append('status', params.status);
-    
-    const query = searchParams.toString();
-    return apiRequest<Visitor[]>(`/visitors${query ? `?${query}` : ''}`);
+  getAll: async (params?: { startDate?: string; endDate?: string; status?: string }): Promise<Visitor[]> => {
+    let query = supabase.from('visitors').select('*').order('check_in_time', { ascending: false });
+
+    if (params?.status) {
+      query = query.eq('status', params.status);
+    }
+    if (params?.startDate) {
+      query = query.gte('check_in_time', `${params.startDate}T00:00:00`);
+    }
+    if (params?.endDate) {
+      query = query.lte('check_in_time', `${params.endDate}T23:59:59`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data as Visitor[]) ?? [];
   },
 
-  // Get single visitor
-  getById: (id: number) => apiRequest<Visitor>(`/visitors/${id}`),
+  getById: async (id: string): Promise<Visitor> => {
+    const { data, error } = await supabase.from('visitors').select('*').eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Visitor not found');
+    return data as Visitor;
+  },
 
-  // Check-in visitor
-  checkIn: (data: Omit<Visitor, 'id' | 'check_in_time' | 'check_out_time' | 'status' | 'created_at' | 'updated_at'>) =>
-    apiRequest<Visitor>('/visitors/checkin', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  checkIn: async (data: Omit<Visitor, 'id' | 'check_in_time' | 'check_out_time' | 'status' | 'created_at' | 'updated_at'>): Promise<Visitor> => {
+    const { data: visitor, error } = await supabase
+      .from('visitors')
+      .insert({
+        name: data.name,
+        email: data.email || null,
+        phone: data.phone || null,
+        company: data.company || null,
+        purpose: data.purpose || 'Business Meeting',
+        host_name: data.host_name,
+        host_department: data.host_department || null,
+        id_proof_type: data.id_proof_type || null,
+        id_proof_number: data.id_proof_number || null,
+        vehicle_number: data.vehicle_number || null,
+        has_laptop: data.has_laptop ?? false,
+        laptop_make: data.laptop_make || null,
+        laptop_model: data.laptop_model || null,
+        laptop_serial: data.laptop_serial || null,
+        notes: data.notes || null,
+        status: 'checked_in',
+      })
+      .select()
+      .single();
 
-  // Check-out visitor
-  checkOut: (id: number) =>
-    apiRequest<Visitor>(`/visitors/${id}/checkout`, { method: 'PUT' }),
+    if (error) throw new Error(error.message);
+    return visitor as Visitor;
+  },
 
-  // Export visitors as CSV
+  checkOut: async (id: string): Promise<Visitor> => {
+    const { data, error } = await supabase
+      .from('visitors')
+      .update({ status: 'checked_out', check_out_time: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data as Visitor;
+  },
+
   exportCSV: async (params?: { startDate?: string; endDate?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.startDate) searchParams.append('startDate', params.startDate);
-    if (params?.endDate) searchParams.append('endDate', params.endDate);
-    
-    const query = searchParams.toString();
-    const response = await fetch(`${API_BASE_URL}/visitors/export/csv${query ? `?${query}` : ''}`);
-    
-    if (!response.ok) throw new Error('Export failed');
-    
-    const blob = await response.blob();
+    let query = supabase.from('visitors').select('*').order('check_in_time', { ascending: false });
+
+    if (params?.startDate) {
+      query = query.gte('check_in_time', `${params.startDate}T00:00:00`);
+    }
+    if (params?.endDate) {
+      query = query.lte('check_in_time', `${params.endDate}T23:59:59`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error('Export failed');
+
+    const visitors = data as Visitor[];
+    const headers = ['Name', 'Email', 'Phone', 'Company', 'Purpose', 'Host', 'Department', 'ID Type', 'ID Number', 'Vehicle', 'Has Laptop', 'Laptop Make', 'Laptop Model', 'Laptop Serial', 'Check In', 'Check Out', 'Status', 'Notes'];
+    const rows = visitors.map(v => [
+      v.name, v.email ?? '', v.phone ?? '', v.company ?? '', v.purpose,
+      v.host_name, v.host_department ?? '', v.id_proof_type ?? '', v.id_proof_number ?? '',
+      v.vehicle_number ?? '', v.has_laptop ? 'Yes' : 'No', v.laptop_make ?? '',
+      v.laptop_model ?? '', v.laptop_serial ?? '', v.check_in_time, v.check_out_time ?? '',
+      v.status, v.notes ?? ''
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -137,36 +169,91 @@ export const visitorsApi = {
 // ============ HOSTS API ============
 
 export const hostsApi = {
-  getAll: () => apiRequest<Host[]>('/hosts'),
-  create: (data: Omit<Host, 'id' | 'is_active'>) =>
-    apiRequest<Host>('/hosts', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  getAll: async (): Promise<Host[]> => {
+    const { data, error } = await supabase.from('hosts').select('*').eq('is_active', true).order('name');
+    if (error) throw new Error(error.message);
+    return (data as Host[]) ?? [];
+  },
+
+  create: async (hostData: Omit<Host, 'id' | 'is_active'>): Promise<Host> => {
+    const { data, error } = await supabase
+      .from('hosts')
+      .insert({
+        name: hostData.name,
+        email: hostData.email,
+        phone: hostData.phone || null,
+        department: hostData.department || null,
+        designation: hostData.designation || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data as Host;
+  },
 };
 
 // ============ DEPARTMENTS API ============
 
 export const departmentsApi = {
-  getAll: () => apiRequest<Department[]>('/departments'),
+  getAll: async (): Promise<Department[]> => {
+    const { data, error } = await supabase.from('departments').select('*').eq('is_active', true).order('name');
+    if (error) throw new Error(error.message);
+    return (data as Department[]) ?? [];
+  },
 };
 
 // ============ PURPOSES API ============
 
 export const purposesApi = {
-  getAll: () => apiRequest<VisitPurpose[]>('/purposes'),
+  getAll: async (): Promise<VisitPurpose[]> => {
+    const { data, error } = await supabase.from('visit_purposes').select('*').eq('is_active', true).order('name');
+    if (error) throw new Error(error.message);
+    return (data as VisitPurpose[]) ?? [];
+  },
 };
 
 // ============ STATISTICS API ============
 
 export const statisticsApi = {
-  getDashboard: () => apiRequest<DashboardStats>('/statistics/dashboard'),
-  getByDateRange: (startDate: string, endDate: string) =>
-    apiRequest<any[]>(`/statistics/visitors?startDate=${startDate}&endDate=${endDate}`),
+  getDashboard: async (): Promise<DashboardStats> => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    
+    // Start of week (Monday)
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset).toISOString();
+    
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const [todayRes, checkedInRes, weekRes, monthRes] = await Promise.all([
+      supabase.from('visitors').select('id', { count: 'exact', head: true }).gte('check_in_time', todayStart),
+      supabase.from('visitors').select('id', { count: 'exact', head: true }).eq('status', 'checked_in'),
+      supabase.from('visitors').select('id', { count: 'exact', head: true }).gte('check_in_time', weekStart),
+      supabase.from('visitors').select('id', { count: 'exact', head: true }).gte('check_in_time', monthStart),
+    ]);
+
+    return {
+      todayVisitors: todayRes.count ?? 0,
+      currentlyCheckedIn: checkedInRes.count ?? 0,
+      weekVisitors: weekRes.count ?? 0,
+      monthVisitors: monthRes.count ?? 0,
+    };
+  },
 };
 
-// ============ HEALTH CHECK ============
+// ============ SETTINGS API ============
 
-export const healthApi = {
-  check: () => apiRequest<{ status: string; database: string }>('/health'),
+export const settingsApi = {
+  getAll: async () => {
+    const { data, error } = await supabase.from('settings').select('*');
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+
+  update: async (key: string, value: string) => {
+    const { error } = await supabase.from('settings').update({ setting_value: value }).eq('setting_key', key);
+    if (error) throw new Error(error.message);
+  },
 };

@@ -5,14 +5,12 @@ import { statisticsApi, visitorsApi, type Visitor, type DashboardStats } from "@
 import { format } from "date-fns";
 
 const Dashboard = () => {
-  // Fetch dashboard statistics from MySQL API
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
     queryFn: statisticsApi.getDashboard,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Fetch recent visitors (currently checked in)
   const { data: visitors, isLoading: visitorsLoading } = useQuery<Visitor[]>({
     queryKey: ['recent-visitors'],
     queryFn: () => visitorsApi.getAll({ status: 'checked_in' }),
@@ -21,7 +19,6 @@ const Dashboard = () => {
 
   const isLoading = statsLoading || visitorsLoading;
 
-  // Format time from ISO string
   const formatTime = (isoString: string) => {
     try {
       return format(new Date(isoString), 'hh:mm a');
@@ -42,9 +39,9 @@ const Dashboard = () => {
             <div className="flex items-center gap-3 text-destructive">
               <AlertCircle className="h-5 w-5" />
               <div>
-                <p className="font-medium">Failed to connect to backend</p>
+                <p className="font-medium">Failed to load dashboard data</p>
                 <p className="text-sm text-muted-foreground">
-                  Make sure your MySQL backend is running at the configured API URL.
+                  {statsError instanceof Error ? statsError.message : 'Please try again later.'}
                 </p>
               </div>
             </div>
