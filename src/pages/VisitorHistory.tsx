@@ -19,7 +19,6 @@ const VisitorHistory = () => {
   const [fromDate, setFromDate] = useState<Date>();
   const [toDate, setToDate] = useState<Date>();
 
-  // Fetch visitors from MySQL API
   const { data: visitors = [], isLoading, error, refetch } = useQuery<Visitor[]>({
     queryKey: ['visitors', fromDate, toDate, statusFilter],
     queryFn: () => visitorsApi.getAll({
@@ -29,14 +28,12 @@ const VisitorHistory = () => {
     }),
   });
 
-  // Client-side search filtering
   const filteredVisitors = visitors.filter(visitor => {
     const matchesSearch = 
       visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (visitor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       (visitor.company?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       (visitor.phone?.includes(searchTerm) ?? false);
-    
     return matchesSearch;
   });
 
@@ -64,12 +61,6 @@ const VisitorHistory = () => {
     }
   };
 
-  const mapStatusForFilter = (status: string): string => {
-    if (status === 'checked-in') return 'checked_in';
-    if (status === 'completed') return 'checked_out';
-    return status;
-  };
-
   if (error) {
     return (
       <div className="space-y-6">
@@ -82,15 +73,13 @@ const VisitorHistory = () => {
             <div className="flex items-center gap-3 text-destructive">
               <AlertCircle className="h-5 w-5" />
               <div>
-                <p className="font-medium">Failed to connect to backend</p>
+                <p className="font-medium">Failed to load visitor data</p>
                 <p className="text-sm text-muted-foreground">
-                  Make sure your MySQL backend is running at the configured API URL.
+                  {error instanceof Error ? error.message : 'Please try again later.'}
                 </p>
               </div>
             </div>
-            <Button variant="outline" className="mt-4" onClick={() => refetch()}>
-              Retry
-            </Button>
+            <Button variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
           </CardContent>
         </Card>
       </div>
@@ -104,7 +93,6 @@ const VisitorHistory = () => {
         <p className="text-muted-foreground">Track and manage all visitor records</p>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -118,18 +106,10 @@ const VisitorHistory = () => {
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, email, mobile, or company..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Input placeholder="Search by name, email, mobile, or company..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                 </div>
               </div>
-              <Select 
-                value={statusFilter} 
-                onValueChange={(value) => setStatusFilter(mapStatusForFilter(value))}
-              >
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -147,22 +127,13 @@ const VisitorHistory = () => {
                 <label className="text-sm font-medium mb-2 block">From Date</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {fromDate ? format(fromDate, "PPP") : "Select start date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={fromDate}
-                      onSelect={setFromDate}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
+                    <Calendar mode="single" selected={fromDate} onSelect={setFromDate} initialFocus className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -171,45 +142,21 @@ const VisitorHistory = () => {
                 <label className="text-sm font-medium mb-2 block">To Date</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {toDate ? format(toDate, "PPP") : "Select end date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={toDate}
-                      onSelect={setToDate}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
+                    <Calendar mode="single" selected={toDate} onSelect={setToDate} initialFocus className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
               </div>
               
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setFromDate(undefined);
-                    setToDate(undefined);
-                    setStatusFilter('all');
-                    setSearchTerm('');
-                  }}
-                >
-                  Clear Filters
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center space-x-2"
-                  onClick={handleExportCSV}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Export</span>
+                <Button variant="outline" onClick={() => { setFromDate(undefined); setToDate(undefined); setStatusFilter('all'); setSearchTerm(''); }}>Clear Filters</Button>
+                <Button variant="outline" className="flex items-center space-x-2" onClick={handleExportCSV}>
+                  <Download className="h-4 w-4" /><span>Export</span>
                 </Button>
               </div>
             </div>
@@ -217,12 +164,9 @@ const VisitorHistory = () => {
         </CardContent>
       </Card>
 
-      {/* Results */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Visitor Records {isLoading ? '' : `(${filteredVisitors.length})`}
-          </CardTitle>
+          <CardTitle>Visitor Records {isLoading ? '' : `(${filteredVisitors.length})`}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -257,9 +201,7 @@ const VisitorHistory = () => {
                         <div>
                           <div className="font-medium">{visitor.name}</div>
                           {visitor.id_proof_type && (
-                            <div className="text-sm text-muted-foreground">
-                              ID: {visitor.id_proof_type} - {visitor.id_proof_number}
-                            </div>
+                            <div className="text-sm text-muted-foreground">ID: {visitor.id_proof_type} - {visitor.id_proof_number}</div>
                           )}
                         </div>
                       </TableCell>
@@ -270,32 +212,24 @@ const VisitorHistory = () => {
                         </div>
                       </TableCell>
                       <TableCell>{visitor.company ?? '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{visitor.purpose}</Badge>
-                      </TableCell>
+                      <TableCell><Badge variant="outline">{visitor.purpose}</Badge></TableCell>
                       <TableCell>
                         <div>
                           <div>{visitor.host_name}</div>
-                          {visitor.host_department && (
-                            <div className="text-sm text-muted-foreground">{visitor.host_department}</div>
-                          )}
+                          {visitor.host_department && <div className="text-sm text-muted-foreground">{visitor.host_department}</div>}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
                           {new Date(visitor.check_in_time).toLocaleDateString()}
-                          <div className="text-muted-foreground">
-                            {new Date(visitor.check_in_time).toLocaleTimeString()}
-                          </div>
+                          <div className="text-muted-foreground">{new Date(visitor.check_in_time).toLocaleTimeString()}</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         {visitor.check_out_time ? (
                           <div className="text-sm">
                             {new Date(visitor.check_out_time).toLocaleDateString()}
-                            <div className="text-muted-foreground">
-                              {new Date(visitor.check_out_time).toLocaleTimeString()}
-                            </div>
+                            <div className="text-muted-foreground">{new Date(visitor.check_out_time).toLocaleTimeString()}</div>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -303,9 +237,7 @@ const VisitorHistory = () => {
                       </TableCell>
                       <TableCell>{getStatusBadge(visitor.status)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
