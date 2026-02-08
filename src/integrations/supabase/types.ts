@@ -14,7 +14,189 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      hosts: {
+        Row: {
+          created_at: string
+          department: string | null
+          designation: string | null
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          designation?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          designation?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      visit_purposes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      visitors: {
+        Row: {
+          badge_number: string | null
+          check_in_time: string
+          check_out_time: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          has_laptop: boolean
+          host_department: string | null
+          host_name: string
+          id: string
+          id_proof_number: string | null
+          id_proof_type: string | null
+          laptop_make: string | null
+          laptop_model: string | null
+          laptop_serial: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          photo_url: string | null
+          purpose: string
+          status: string
+          updated_at: string
+          vehicle_number: string | null
+        }
+        Insert: {
+          badge_number?: string | null
+          check_in_time?: string
+          check_out_time?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          has_laptop?: boolean
+          host_department?: string | null
+          host_name: string
+          id?: string
+          id_proof_number?: string | null
+          id_proof_type?: string | null
+          laptop_make?: string | null
+          laptop_model?: string | null
+          laptop_serial?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          purpose?: string
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Update: {
+          badge_number?: string | null
+          check_in_time?: string
+          check_out_time?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          has_laptop?: boolean
+          host_department?: string | null
+          host_name?: string
+          id?: string
+          id_proof_number?: string | null
+          id_proof_type?: string | null
+          laptop_make?: string | null
+          laptop_model?: string | null
+          laptop_serial?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          purpose?: string
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
