@@ -434,6 +434,12 @@ const CheckInOut = () => {
                       <div><span className="text-muted-foreground">Host:</span><span className="ml-2 font-medium">{selectedVisitor.host_name}</span></div>
                       <div><span className="text-muted-foreground">Department:</span><Badge variant="secondary" className="ml-2">{selectedVisitor.host_department || 'N/A'}</Badge></div>
                       <div><span className="text-muted-foreground">Purpose:</span><span className="ml-2 font-medium">{selectedVisitor.purpose || 'N/A'}</span></div>
+                      {selectedVisitor.has_laptop && (
+                        <>
+                          <div><span className="text-muted-foreground">Laptop:</span><span className="ml-2 font-medium">{selectedVisitor.laptop_make} {selectedVisitor.laptop_model}</span></div>
+                          <div><span className="text-muted-foreground">Serial No:</span><span className="ml-2 font-medium">{selectedVisitor.laptop_serial || 'N/A'}</span></div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

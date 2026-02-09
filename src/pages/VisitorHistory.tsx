@@ -190,6 +190,7 @@ const VisitorHistory = () => {
                     <TableHead>Host</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
+                    <TableHead>Laptop</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -230,6 +231,17 @@ const VisitorHistory = () => {
                           <div className="text-sm">
                             {new Date(visitor.check_out_time).toLocaleDateString()}
                             <div className="text-muted-foreground">{new Date(visitor.check_out_time).toLocaleTimeString()}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {visitor.has_laptop ? (
+                          <div className="text-sm">
+                            <Badge variant="outline" className="mb-1">Yes</Badge>
+                            <div className="text-muted-foreground">{visitor.laptop_make} {visitor.laptop_model}</div>
+                            {visitor.laptop_serial && <div className="text-muted-foreground text-xs">S/N: {visitor.laptop_serial}</div>}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
